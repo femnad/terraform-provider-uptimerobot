@@ -54,6 +54,11 @@ type monitorRequest struct {
 	auth
 }
 
+type deleteRequest struct {
+	ID int64 `json:"id"`
+	auth
+}
+
 type monitorsResponse struct {
 	Monitors []Monitor `json:"monitors"`
 }
@@ -95,9 +100,7 @@ type Client struct {
 	apiKey string
 }
 
-func (c *Client) getAuthBody() (io.Reader, error) {
-	a := auth{ApiKey: c.apiKey}
-
+func bufferBody(a any) (io.Reader, error) {
 	out, err := json.Marshal(a)
 	if err != nil {
 		return nil, err
@@ -106,25 +109,25 @@ func (c *Client) getAuthBody() (io.Reader, error) {
 	return bytes.NewBuffer(out), nil
 }
 
+func (c *Client) getAuthBody() (io.Reader, error) {
+	a := auth{ApiKey: c.apiKey}
+	return bufferBody(a)
+}
+
 func (c *Client) getMonitorBody(monitor Monitor) (io.Reader, error) {
 	r := monitorRequest{Monitor: monitor, auth: auth{ApiKey: c.apiKey}}
-	out, err := json.Marshal(r)
-	if err != nil {
-		return nil, err
-	}
+	return bufferBody(r)
+}
 
-	return bytes.NewBuffer(out), nil
+func (c *Client) getDeleteBody(id int64) (io.Reader, error) {
+	req := deleteRequest{ID: id, auth: auth{ApiKey: c.apiKey}}
+	return bufferBody(req)
 }
 
 func (c *Client) getMonitorRequestBody(id int64) (io.Reader, error) {
 	filterId := strconv.Itoa(int(id))
 	r := monitorsRequest{Monitors: filterId, auth: auth{ApiKey: c.apiKey}}
-	out, err := json.Marshal(r)
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes.NewBuffer(out), nil
+	return bufferBody(r)
 }
 
 func readRespBody(resp *http.Response) ([]byte, error) {
@@ -150,7 +153,7 @@ func getRequestResp(url string, body io.Reader) ([]byte, error) {
 			return nil, err
 		}
 
-		return nil, fmt.Errorf("error getting alert contacts: status code: %d, body %s, error %v",
+		return nil, fmt.Errorf("unexpected response: status code %d, body %s, error %v",
 			resp.StatusCode, respBody, err)
 	}
 
@@ -174,7 +177,7 @@ func (c *Client) GetAlertContacts() ([]AlertContact, error) {
 	return resp.AlertContacts, err
 }
 
-func (c Client) createOrUpdate(monitor Monitor, url string) (out Monitor, err error) {
+func (c *Client) createOrUpdate(monitor Monitor, url string) (out Monitor, err error) {
 	body, err := c.getMonitorBody(monitor)
 	if err != nil {
 		return
@@ -245,6 +248,17 @@ func (c *Client) UpdateMonitor(monitor Monitor) (out Monitor, err error) {
 
 	url := fmt.Sprintf("%s/editMonitor", baseURL)
 	return c.createOrUpdate(monitor, url)
+}
+
+func (c *Client) DeleteMonitor(id int64) (err error) {
+	url := fmt.Sprintf("%s/deleteMonitor", baseURL)
+	body, err := c.getDeleteBody(id)
+	if err != nil {
+		return
+	}
+
+	_, err = getRequestResp(url, body)
+	return
 }
 
 func New(apiKey string) (*Client, error) {

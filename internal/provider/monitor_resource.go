@@ -224,4 +224,26 @@ func (r *monitorResource) Update(ctx context.Context, req resource.UpdateRequest
 }
 
 func (r *monitorResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state monitorResourceModel
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	monitorID, err := strconv.Atoi(state.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error deleting monitor",
+			fmt.Sprintf("Could not determine monitor ID: %v", err))
+		return
+	}
+
+	err = r.client.DeleteMonitor(int64(monitorID))
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error deleting monitor",
+			fmt.Sprintf("Could not delete monitor with ID %d: %v", monitorID, err))
+		return
+	}
 }
