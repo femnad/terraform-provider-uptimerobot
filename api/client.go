@@ -174,8 +174,7 @@ func (c *Client) GetAlertContacts() ([]AlertContact, error) {
 	return resp.AlertContacts, err
 }
 
-func (c *Client) CreateMonitor(monitor Monitor) (out Monitor, err error) {
-	url := fmt.Sprintf("%s/newMonitor", baseURL)
+func (c Client) createOrUpdate(monitor Monitor, url string) (out Monitor, err error) {
 	body, err := c.getMonitorBody(monitor)
 	if err != nil {
 		return
@@ -195,6 +194,16 @@ func (c *Client) CreateMonitor(monitor Monitor) (out Monitor, err error) {
 	out = monitor
 	out.ID = resp.Monitor.ID
 	return
+}
+
+func (c *Client) CreateMonitor(monitor Monitor) (out Monitor, err error) {
+	url := fmt.Sprintf("%s/newMonitor", baseURL)
+	out, err = c.createOrUpdate(monitor, url)
+	if err != nil {
+		return
+	}
+
+	return c.createOrUpdate(monitor, url)
 }
 
 func (c *Client) GetMonitor(id int64) (out Monitor, err error) {
@@ -222,6 +231,20 @@ func (c *Client) GetMonitor(id int64) (out Monitor, err error) {
 	}
 
 	return out, fmt.Errorf("unable to find monitor with id %d", id)
+}
+
+func (c *Client) UpdateMonitor(monitor Monitor) (out Monitor, err error) {
+	existing, err := c.GetMonitor(monitor.ID)
+	if err != nil {
+		return
+	}
+
+	if monitor.Type != existing.Type {
+		return out, fmt.Errorf("unable to change monitor type via updating")
+	}
+
+	url := fmt.Sprintf("%s/editMonitor", baseURL)
+	return c.createOrUpdate(monitor, url)
 }
 
 func New(apiKey string) (*Client, error) {

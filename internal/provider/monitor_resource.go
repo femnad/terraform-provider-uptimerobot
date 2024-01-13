@@ -3,10 +3,14 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -20,8 +24,9 @@ var (
 
 type monitorResourceModel struct {
 	FriendlyName types.String `tfsdk:"friendly_name"`
-	ID           types.Int64  `tfsdk:"id"`
+	ID           types.String `tfsdk:"id"`
 	Interval     types.Int64  `tfsdk:"interval"`
+	LastUpdated  types.String `tfsdk:"last_updated"`
 	Timeout      types.Int64  `tfsdk:"timeout"`
 	Type         types.String `tfsdk:"type"`
 	URL          types.String `tfsdk:"url"`
@@ -64,7 +69,13 @@ func (r *monitorResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id": schema.Int64Attribute{
+			"id": schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"last_updated": schema.StringAttribute{
 				Computed: true,
 			},
 			"friendly_name": schema.StringAttribute{
@@ -87,6 +98,22 @@ func (r *monitorResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 	}
 }
 
+func monitorFromPlan(plan monitorResourceModel) (uptimerobot.Monitor, error) {
+	monitor := uptimerobot.Monitor{
+		FriendlyName: plan.FriendlyName.ValueString(),
+		URL:          plan.URL.ValueString(),
+		Interval:     plan.Interval.ValueInt64(),
+		Timeout:      plan.Interval.ValueInt64(),
+	}
+	intType, err := uptimerobot.MonitorTypeToInt(plan.Type.ValueString())
+	if err != nil {
+		return monitor, err
+	}
+
+	monitor.Type = intType
+	return monitor, nil
+}
+
 func (r *monitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan monitorResourceModel
 	diags := req.Plan.Get(ctx, &plan)
@@ -96,20 +123,13 @@ func (r *monitorResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	monitor := uptimerobot.Monitor{
-		FriendlyName: plan.FriendlyName.ValueString(),
-		URL:          plan.URL.ValueString(),
-		Interval:     plan.Interval.ValueInt64(),
-		Timeout:      plan.Interval.ValueInt64(),
-	}
-	intType, err := uptimerobot.MonitorTypeToInt(plan.Type.ValueString())
+	monitor, err := monitorFromPlan(plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating monitor",
 			"Could not create order, error determining monitor type: "+err.Error())
 		return
 	}
-	monitor.Type = intType
 
 	monitor, err = r.client.CreateMonitor(monitor)
 	if err != nil {
@@ -119,7 +139,8 @@ func (r *monitorResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	plan.ID = types.Int64Value(monitor.ID)
+	planID := strconv.Itoa(int(monitor.ID))
+	plan.ID = types.StringValue(planID)
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -133,8 +154,16 @@ func (r *monitorResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	id := state.ID.ValueInt64()
-	monitor, err := r.client.GetMonitor(id)
+	id, err := strconv.Atoi(state.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading UptimeRobot monitor",
+			fmt.Sprintf("Could not determine ID of the monitor %d: %v", id, err))
+		return
+	}
+	monitorId := int64(id)
+
+	monitor, err := r.client.GetMonitor(monitorId)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading UptimeRobot monitor",
@@ -159,6 +188,39 @@ func (r *monitorResource) Read(ctx context.Context, req resource.ReadRequest, re
 }
 
 func (r *monitorResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan monitorResourceModel
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	monitor, err := monitorFromPlan(plan)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error updating monitor",
+			fmt.Sprintf("Could not update monitor %v", err))
+	}
+
+	monitorID, err := strconv.Atoi(plan.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error updating monitor",
+			fmt.Sprintf("Could not determine monitor ID %v", err))
+	}
+	monitor.ID = int64(monitorID)
+
+	monitor, err = r.client.UpdateMonitor(monitor)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error updating monitor",
+			fmt.Sprintf("Could not update monitor %v", err))
+	}
+
+	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC3339))
+
+	diags = resp.State.Set(ctx, plan)
+	resp.Diagnostics.Append(diags...)
 }
 
 func (r *monitorResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
