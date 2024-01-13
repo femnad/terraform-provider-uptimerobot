@@ -1,7 +1,7 @@
 override := '''provider_installation {
 
   dev_overrides {
-    "registry.terraform.io/femnad/uptimerobot" = "${GOPATH:-$HOME/go}/bin"
+    \""registry.terraform.io/femnad/uptimerobot"\" = \""${GOPATH:-$HOME/go}/bin"\"
   }
 
   direct {}
