@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	uptimerobot "terraform-provider-uptimerobot/api"
 )
@@ -58,6 +59,8 @@ func (p uptimerobotProvider) Schema(_ context.Context, _ provider.SchemaRequest,
 }
 
 func (p uptimerobotProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	tflog.Info(ctx, "Configuring UptimeRobot client")
+
 	var config uptimerobotProviderModel
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
@@ -95,6 +98,11 @@ func (p uptimerobotProvider) Configure(ctx context.Context, req provider.Configu
 		return
 	}
 
+	ctx = tflog.SetField(ctx, apiKeyAttributeName, apiKey)
+	ctx = tflog.MaskFieldValuesWithFieldKeys(ctx, apiKeyAttributeName)
+
+	tflog.Debug(ctx, "Creating UptimeRobot client")
+
 	c, err := uptimerobot.New(apiKey)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Create UptimeRobot API Client",
@@ -105,6 +113,8 @@ func (p uptimerobotProvider) Configure(ctx context.Context, req provider.Configu
 
 	resp.DataSourceData = c
 	resp.ResourceData = c
+
+	tflog.Info(ctx, "Configured UptimeRobot client", map[string]any{"success": true})
 }
 
 func (p uptimerobotProvider) DataSources(_ context.Context) []func() datasource.DataSource {
