@@ -11,4 +11,4 @@ add-override:
     echo "{{ override }}" > $HOME/.terraformrc
 
 remove-override:
-    rm $HOME/.terraformrc
+    rm -f $HOME/.terraformrc
