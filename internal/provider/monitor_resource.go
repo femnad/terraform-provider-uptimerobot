@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -18,8 +19,9 @@ import (
 )
 
 var (
-	_ resource.Resource              = &monitorResource{}
-	_ resource.ResourceWithConfigure = &monitorResource{}
+	_ resource.Resource                = &monitorResource{}
+	_ resource.ResourceWithConfigure   = &monitorResource{}
+	_ resource.ResourceWithImportState = &monitorResource{}
 )
 
 type monitorResourceModel struct {
@@ -57,13 +59,17 @@ func (r *monitorResource) Configure(_ context.Context, req resource.ConfigureReq
 	r.client = client
 }
 
-func (r *monitorResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *monitorResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+func (r *monitorResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_monitor"
 }
 
 func (r *monitorResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	var validMonitorTypes []string
-	for t, _ := range uptimerobot.MonitorTypes {
+	for t := range uptimerobot.MonitorTypes {
 		validMonitorTypes = append(validMonitorTypes, t)
 	}
 
