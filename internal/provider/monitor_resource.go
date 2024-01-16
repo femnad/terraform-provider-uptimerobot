@@ -74,31 +74,39 @@ func (r *monitorResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 	}
 
 	resp.Schema = schema.Schema{
+		Description: "Manages a monitor.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed: true,
+				Description: "Identifier of the monitor.",
+				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"last_updated": schema.StringAttribute{
-				Computed: true,
+				Description: "Timestamp of the last Terraform update of the monitor.",
+				Computed:    true,
 			},
 			"friendly_name": schema.StringAttribute{
-				Required: true,
+				Description: "Friendly name of the monitor",
+				Required:    true,
 			},
 			"url": schema.StringAttribute{
-				Required: true,
+				Description: "URL to monitor",
+				Required:    true,
 			},
 			"type": schema.StringAttribute{
-				Required:   true,
-				Validators: []validator.String{stringvalidator.OneOf(validMonitorTypes...)},
+				Description: "Type of the monitor",
+				Required:    true,
+				Validators:  []validator.String{stringvalidator.OneOf(validMonitorTypes...)},
 			},
 			"interval": schema.Int64Attribute{
-				Optional: true,
+				Description: "Monitor check interval",
+				Optional:    true,
 			},
 			"timeout": schema.Int64Attribute{
-				Optional: true,
+				Description: "Monitor check timeout",
+				Optional:    true,
 			},
 		},
 	}
@@ -133,7 +141,7 @@ func (r *monitorResource) Create(ctx context.Context, req resource.CreateRequest
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating monitor",
-			"Could not create order, error determining monitor type: "+err.Error())
+			"Could not create monitor, error determining monitor type: "+err.Error())
 		return
 	}
 
@@ -141,7 +149,7 @@ func (r *monitorResource) Create(ctx context.Context, req resource.CreateRequest
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating monitor",
-			"Could not create order, unexpected error: "+err.Error())
+			"Could not create monitor, unexpected error: "+err.Error())
 		return
 	}
 

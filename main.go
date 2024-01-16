@@ -10,6 +10,9 @@ import (
 	"terraform-provider-uptimerobot/internal/provider"
 )
 
+//go:generate terraform fmt -recursive ./examples/
+//go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
+
 var (
 	version string = "dev"
 )

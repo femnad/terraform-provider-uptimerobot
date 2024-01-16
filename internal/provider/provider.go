@@ -49,10 +49,12 @@ func (p uptimerobotProvider) Metadata(_ context.Context, _ provider.MetadataRequ
 
 func (p uptimerobotProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "Interact with UptimeRobot.",
 		Attributes: map[string]schema.Attribute{
 			apiKeyAttributeName: schema.StringAttribute{
-				Optional:  true,
-				Sensitive: true,
+				Description: "API Key, must be account-specific API key for create, update and delete operations",
+				Optional:    true,
+				Sensitive:   true,
 			},
 		},
 	}

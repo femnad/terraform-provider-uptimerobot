@@ -55,25 +55,31 @@ func (d *alertContactsDataSource) Metadata(_ context.Context, req datasource.Met
 
 func (d *alertContactsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "Fetches alert contacts defined for the account",
 		Attributes: map[string]schema.Attribute{
 			"alert_contacts": schema.ListNestedAttribute{
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
-							Computed: true,
+							Description: "Identifier of the alert contact.",
+							Computed:    true,
 						},
 						"friendly_name": schema.StringAttribute{
-							Computed: true,
+							Description: "Friendly name for the alert contact.",
+							Computed:    true,
 						},
 						"type": schema.Int64Attribute{
-							Computed: true,
+							Description: "Type of the alert contact.",
+							Computed:    true,
 						},
 						"status": schema.Int64Attribute{
-							Computed: true,
+							Description: "Status of the alert contact.",
+							Computed:    true,
 						},
 						"value": schema.StringAttribute{
-							Computed: true,
+							Description: "Value of the alert contact.",
+							Computed:    true,
 						},
 					},
 				},
