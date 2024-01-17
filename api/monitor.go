@@ -53,7 +53,12 @@ func (c *Client) getDeleteBody(id int64) (io.Reader, error) {
 	return bufferBody(req)
 }
 
-func (c *Client) getMonitorRequestBody(id int64) (io.Reader, error) {
+func (c *Client) getMonitorsRequestBody() (io.Reader, error) {
+	r := getMonitorsRequest{auth: auth{ApiKey: c.apiKey}}
+	return bufferBody(r)
+}
+
+func (c *Client) getFilteredMonitorsRequestBody(id int64) (io.Reader, error) {
 	filterId := strconv.Itoa(int(id))
 	r := getMonitorsRequest{Monitors: filterId, auth: auth{ApiKey: c.apiKey}}
 	return bufferBody(r)
@@ -113,9 +118,30 @@ func (c *Client) CreateMonitor(monitor Monitor) (out Monitor, err error) {
 	return c.createOrUpdate(monitor, url)
 }
 
+func (c *Client) GetMonitors() (out []Monitor, err error) {
+	url := fmt.Sprintf("%s/getMonitors", baseURL)
+	body, err := c.getMonitorsRequestBody()
+	if err != nil {
+		return
+	}
+
+	var resp getMonitorsResponse
+	respBody, err := getRequestResp(url, body)
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal(respBody, &resp)
+	if err != nil {
+		return
+	}
+
+	return resp.Monitors, nil
+}
+
 func (c *Client) GetMonitor(id int64) (out Monitor, err error) {
 	url := fmt.Sprintf("%s/getMonitors", baseURL)
-	body, err := c.getMonitorRequestBody(id)
+	body, err := c.getFilteredMonitorsRequestBody(id)
 	if err != nil {
 		return
 	}
