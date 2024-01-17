@@ -12,6 +12,7 @@ import (
 const (
 	baseURL         = "https://api.uptimerobot.com/v2"
 	jsonContentType = "application/json"
+	okStatus        = "ok"
 )
 
 var (
@@ -26,6 +27,10 @@ var (
 
 type auth struct {
 	ApiKey string `json:"api_key"`
+}
+
+type baseResponse struct {
+	Stat string `json:"stat"`
 }
 
 type AlertContact struct {
