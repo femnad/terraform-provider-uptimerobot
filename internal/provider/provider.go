@@ -122,6 +122,7 @@ func (p uptimerobotProvider) Configure(ctx context.Context, req provider.Configu
 func (p uptimerobotProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewAccountDetailsDataSource,
+		NewAlertContactDataSource,
 		NewAlertContactsDataSource,
 		NewMonitorsDataSource,
 	}

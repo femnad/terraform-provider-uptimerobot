@@ -6,8 +6,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/types"
-
 	uptimerobot "terraform-provider-uptimerobot/api"
 )
 
@@ -21,15 +19,7 @@ type alertContactsDataSource struct {
 }
 
 type alertContactsDataSourceModel struct {
-	AlertContacts []alertContactModel `tfsdk:"alert_contacts"`
-}
-
-type alertContactModel struct {
-	ID           types.String `tfsdk:"id"`
-	FriendlyName types.String `tfsdk:"friendly_name"`
-	Type         types.Int64  `tfsdk:"type"`
-	Status       types.Int64  `tfsdk:"status"`
-	Value        types.String `tfsdk:"value"`
+	AlertContacts []alertContactDataSourceModel `tfsdk:"alert_contacts"`
 }
 
 func (d *alertContactsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
@@ -69,11 +59,11 @@ func (d *alertContactsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 							Description: "Friendly name for the alert contact.",
 							Computed:    true,
 						},
-						"type": schema.Int64Attribute{
+						"type": schema.StringAttribute{
 							Description: "Type of the alert contact.",
 							Computed:    true,
 						},
-						"status": schema.Int64Attribute{
+						"status": schema.StringAttribute{
 							Description: "Status of the alert contact.",
 							Computed:    true,
 						},
@@ -87,7 +77,7 @@ func (d *alertContactsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 		}}
 }
 
-func (d *alertContactsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *alertContactsDataSource) Read(ctx context.Context, _ datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var state alertContactsDataSourceModel
 
 	alertContacts, err := d.client.GetAlertContacts()
@@ -97,15 +87,12 @@ func (d *alertContactsDataSource) Read(ctx context.Context, req datasource.ReadR
 	}
 
 	for _, contact := range alertContacts {
-		alertContactState := alertContactModel{
-			ID:           types.StringValue(contact.ID),
-			FriendlyName: types.StringValue(contact.FriendlyName),
-			Type:         types.Int64Value(contact.Type),
-			Status:       types.Int64Value(contact.Status),
-			Value:        types.StringValue(contact.Value),
+		var data alertContactDataSourceModel
+		err = mapAlertContactToState(contact, data)
+		if err != nil {
+			resp.Diagnostics.AddError("Error mapping alert contact to state", err.Error())
 		}
-
-		state.AlertContacts = append(state.AlertContacts, alertContactState)
+		state.AlertContacts = append(state.AlertContacts, data)
 	}
 
 	diags := resp.State.Set(ctx, &state)

@@ -15,6 +15,29 @@ const (
 )
 
 var (
+	AlertContactStatuses = map[int64]string{
+		0: "not activated",
+		1: "paused",
+		2: "active",
+	}
+	AlertContactTypes = map[int64]string{
+		1:  "sms",
+		2:  "e-mail",
+		3:  "twitter",
+		4:  "web-hook",
+		5:  "pushbullet",
+		6:  "zapier",
+		7:  "pro-sms",
+		8:  "pushover",
+		9:  "slack",
+		10: "voice-call",
+		11: "splunk",
+		12: "pagerduty",
+		13: "opsgenie",
+		14: "ms-teams",
+		15: "google-chat",
+		16: "discord",
+	}
 	MonitorTypes = map[string]int64{
 		"http":      1,
 		"keyword":   2,

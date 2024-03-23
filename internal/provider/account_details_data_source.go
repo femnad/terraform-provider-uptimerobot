@@ -96,6 +96,7 @@ func (d *accountDetailsDataSource) Read(ctx context.Context, _ datasource.ReadRe
 	state.MonitorInterval = types.Int64Value(account.MonitorInterval)
 	state.UpMonitors = types.Int64Value(account.UpMonitors)
 	state.DownMonitors = types.Int64Value(account.DownMonitors)
+	state.PausedMonitors = types.Int64Value(account.PausedMonitors)
 
 	diags := resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)

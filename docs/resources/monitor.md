@@ -20,6 +20,9 @@ resource "uptimerobot_monitor" "example" {
   type          = "http"
   interval      = 73
   timeout       = 44
+  alert_contact {
+    id = "<alert-contact-id>"
+  }
 }
 ```
 
@@ -34,7 +37,7 @@ resource "uptimerobot_monitor" "example" {
 
 ### Optional
 
-- `alert_contacts` (Block List) (see [below for nested schema](#nestedblock--alert_contacts))
+- `alert_contact` (Block List) (see [below for nested schema](#nestedblock--alert_contact))
 - `interval` (Number) Monitor check interval
 - `timeout` (Number) Monitor check timeout
 
@@ -43,16 +46,16 @@ resource "uptimerobot_monitor" "example" {
 - `id` (String) Identifier of the monitor.
 - `last_updated` (String) Timestamp of the last Terraform update of the monitor.
 
-<a id="nestedblock--alert_contacts"></a>
-### Nested Schema for `alert_contacts`
+<a id="nestedblock--alert_contact"></a>
+### Nested Schema for `alert_contact`
 
 Required:
 
-- `alert_contact` (String) Alert contact ID
+- `id` (String) Alert contact ID
 
 Read-Only:
 
-- `recurrence` (Number) Repetition interval for alert (minutes)
+- `recurrence` (Number) Repetition interval for alerts (minutes)
 - `threshold` (Number) Threshold for alerting (minutes)
 
 ## Import

@@ -31,6 +31,6 @@ Read-Only:
 
 - `friendly_name` (String) Friendly name for the alert contact.
 - `id` (String) Identifier of the alert contact.
-- `status` (Number) Status of the alert contact.
-- `type` (Number) Type of the alert contact.
+- `status` (String) Status of the alert contact.
+- `type` (String) Type of the alert contact.
 - `value` (String) Value of the alert contact.
