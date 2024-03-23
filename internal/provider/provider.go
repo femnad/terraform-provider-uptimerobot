@@ -130,6 +130,7 @@ func (p uptimerobotProvider) DataSources(_ context.Context) []func() datasource.
 
 func (p uptimerobotProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
+		NewAlertContactResource,
 		NewMonitorResource,
 	}
 }

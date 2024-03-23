@@ -240,6 +240,7 @@ func (r *monitorResource) Update(ctx context.Context, req resource.UpdateRequest
 		resp.Diagnostics.AddError(
 			"Error updating monitor",
 			fmt.Sprintf("Could not update monitor %v", err))
+		return
 	}
 
 	monitorID, err := strconv.Atoi(plan.ID.ValueString())
@@ -247,6 +248,7 @@ func (r *monitorResource) Update(ctx context.Context, req resource.UpdateRequest
 		resp.Diagnostics.AddError(
 			"Error updating monitor",
 			fmt.Sprintf("Could not determine monitor ID %v", err))
+		return
 	}
 	monitor.ID = int64(monitorID)
 

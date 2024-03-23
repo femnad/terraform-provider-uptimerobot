@@ -88,7 +88,7 @@ func (d *alertContactsDataSource) Read(ctx context.Context, _ datasource.ReadReq
 
 	for _, contact := range alertContacts {
 		var data alertContactDataSourceModel
-		err = mapAlertContactToState(contact, data)
+		err = mapAlertContactToState(contact, &data)
 		if err != nil {
 			resp.Diagnostics.AddError("Error mapping alert contact to state", err.Error())
 		}

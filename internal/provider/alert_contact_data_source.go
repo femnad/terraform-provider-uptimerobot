@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -63,7 +64,7 @@ func (d *alertContactDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 			},
 			"type": schema.StringAttribute{
 				Description: "Type of the alert contact.",
-				Computed:    true,
+				Optional:    true,
 			},
 			"status": schema.StringAttribute{
 				Description: "Status of the alert contact.",
@@ -71,27 +72,28 @@ func (d *alertContactDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 			},
 			"value": schema.StringAttribute{
 				Description: "Value of the alert contact.",
-				Computed:    true,
+				Optional:    true,
 			},
 		},
 	}
 }
 
-func mapAlertContactToState(contact uptimerobot.AlertContact, state alertContactDataSourceModel) error {
+func mapAlertContactToState(contact uptimerobot.AlertContact, state *alertContactDataSourceModel) error {
 	state.ID = types.StringValue(contact.ID)
+	state.FriendlyName = types.StringValue(contact.FriendlyName)
 	state.Value = types.StringValue(contact.Value)
-
-	status, err := uptimerobot.AlertContactStatusToString(contact.Status)
-	if err != nil {
-		return err
-	}
-	state.Status = types.StringValue(status)
 
 	contactType, err := uptimerobot.AlertContactTypeToString(contact.Type)
 	if err != nil {
 		return err
 	}
 	state.Type = types.StringValue(contactType)
+
+	status, err := uptimerobot.AlertContactStatusToString(contact.Status)
+	if err != nil {
+		return err
+	}
+	state.Status = types.StringValue(status)
 
 	return nil
 }
@@ -106,6 +108,17 @@ func (d *alertContactDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	friendlyName := state.FriendlyName.ValueString()
 
+	alertContactType := state.Type.ValueString()
+	var err error
+	var typeInt int64
+	if alertContactType != "" {
+		typeInt, err = uptimerobot.AlertContactTypeToDesignator(alertContactType)
+		if err != nil {
+			resp.Diagnostics.AddError("Unable to determine alert contact type", err.Error())
+		}
+	}
+	value := state.Value.ValueString()
+
 	alertContacts, err := d.client.GetAlertContacts()
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read UptimeRobot alert contacts", err.Error())
@@ -113,19 +126,38 @@ func (d *alertContactDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	for _, contact := range alertContacts {
-		if contact.FriendlyName == friendlyName {
-			err = mapAlertContactToState(contact, state)
-			if err == nil {
-				resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-			} else {
-				resp.Diagnostics.AddError("Error mapping alert contact to state", err.Error())
-			}
-			return
+		if friendlyName != "" && contact.FriendlyName != friendlyName {
+			continue
 		}
+		if alertContactType != "" && value != "" && (contact.Type != typeInt || contact.Value != value) {
+			continue
+		}
+
+		fail := true
+		fail = false
+		if fail {
+			resp.Diagnostics.AddError("fail", fmt.Sprintf("%+v", contact))
+		}
+		err = mapAlertContactToState(contact, &state)
+		if err == nil {
+			resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+		} else {
+			resp.Diagnostics.AddError("Error mapping alert contact to state", err.Error())
+		}
+		return
 	}
 
+	var missing []string
+	if friendlyName != "" {
+		missing = append(missing, fmt.Sprintf("friendly name %s", friendlyName))
+	}
+	if alertContactType != "" && value != "" {
+		missing = append(missing, fmt.Sprintf("type %s and value %s", alertContactType, value))
+	}
+	suffix := strings.Join(missing, ",")
+
 	resp.Diagnostics.AddError("No alert contact found",
-		fmt.Sprintf("Unable to locate alert contact with friendly name %s", friendlyName))
+		fmt.Sprintf("Unable to locate alert contact with %s", suffix))
 }
 
 func NewAlertContactDataSource() datasource.DataSource {

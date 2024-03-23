@@ -10,6 +10,7 @@ import (
 
 const (
 	baseURL         = "https://api.uptimerobot.com/v2"
+	formContentType = "application/x-www-form-urlencoded"
 	jsonContentType = "application/json"
 	okStatus        = "ok"
 )
@@ -52,19 +53,11 @@ type auth struct {
 }
 
 type baseResponse struct {
-	Stat string `json:"stat"`
-}
-
-type AlertContact struct {
-	ID           string `json:"id,omitempty"`
-	FriendlyName string `json:"friendly_name,omitempty"`
-	Type         int64  `json:"type,omitempty"`
-	Status       int64  `json:"status,omitempty"`
-	Value        string `json:"value,omitempty"`
-}
-
-type alertContactsResponse struct {
-	AlertContacts []AlertContact `json:"alert_contacts,omitempty"`
+	Stat  string `json:"stat"`
+	Error struct {
+		Type    string `json:"type"`
+		Message string `json:"message"`
+	} `json:"error"`
 }
 
 type Client struct {
@@ -115,21 +108,24 @@ func getRequestResp(url string, body io.Reader) ([]byte, error) {
 	return readRespBody(resp)
 }
 
-func (c *Client) GetAlertContacts() ([]AlertContact, error) {
-	url := fmt.Sprintf("%s/getAlertContacts", baseURL)
-	body, err := c.getAuthBody()
+func postForm(url string, payload io.Reader) ([]byte, error) {
+	resp, err := http.Post(url, formContentType, payload)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting alert contacts: error %v", err)
 	}
 
-	var resp alertContactsResponse
-	respBody, err := getRequestResp(url, body)
-	if err != nil {
-		return nil, err
+	var respBody []byte
+	if resp.StatusCode >= 400 {
+		respBody, err = readRespBody(resp)
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, fmt.Errorf("unexpected response: status code %d, body %s, error %v",
+			resp.StatusCode, respBody, err)
 	}
 
-	err = json.Unmarshal(respBody, &resp)
-	return resp.AlertContacts, err
+	return readRespBody(resp)
 }
 
 func New(apiKey string) (*Client, error) {
