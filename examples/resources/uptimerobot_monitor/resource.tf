@@ -5,4 +5,7 @@ resource "uptimerobot_monitor" "example" {
   type          = "http"
   interval      = 73
   timeout       = 44
+  alert_contacts {
+    id = "<alert-contact-id>"
+  }
 }

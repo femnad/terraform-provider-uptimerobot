@@ -12,3 +12,6 @@ add-override:
 
 remove-override:
     rm -f $HOME/.terraformrc
+
+generate:
+    go generate ./...

@@ -5,15 +5,24 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 )
 
+type MonitorAlertContact struct {
+	ID         string `json:"ID,omitempty"`
+	Threshold  int64  `json:"threshold,omitempty"`
+	Recurrence int64  `json:"recurrence,omitempty"`
+}
+
 type Monitor struct {
-	ID           int64  `json:"id,omitempty"`
-	FriendlyName string `json:"friendly_name,omitempty"`
-	URL          string `json:"url,omitempty"`
-	Type         int64  `json:"type,omitempty"`
-	Interval     int64  `json:"interval,omitempty"`
-	Timeout      int64  `json:"timeout,omitempty"`
+	alertContactList []MonitorAlertContact
+	ID               int64  `json:"id,omitempty"`
+	FriendlyName     string `json:"friendly_name,omitempty"`
+	URL              string `json:"url,omitempty"`
+	Type             int64  `json:"type,omitempty"`
+	Interval         int64  `json:"interval,omitempty"`
+	Timeout          int64  `json:"timeout,omitempty"`
+	AlertContacts    string `json:"alertContacts,omitempty"`
 }
 
 type getMonitorRequest struct {
@@ -82,6 +91,16 @@ func MonitorTypeToStr(intType int64) (string, error) {
 
 	return "", fmt.Errorf("unable to corresponding monitor type for %d", intType)
 }
+
+func SerializeMonitorAlertContacts(contacts []MonitorAlertContact) string {
+	var alertContacts []string
+	for _, contact := range contacts {
+		encoded := fmt.Sprintf("%s_%d_%d", contact.ID, contact.Threshold, contact.Recurrence)
+		alertContacts = append(alertContacts, encoded)
+	}
+	return strings.Join(alertContacts, "-")
+}
+
 func (c *Client) createOrUpdate(monitor Monitor, url string) (out Monitor, err error) {
 	body, err := c.getMonitorBody(monitor)
 	if err != nil {
@@ -110,11 +129,6 @@ func (c *Client) createOrUpdate(monitor Monitor, url string) (out Monitor, err e
 
 func (c *Client) CreateMonitor(monitor Monitor) (out Monitor, err error) {
 	url := fmt.Sprintf("%s/newMonitor", baseURL)
-	out, err = c.createOrUpdate(monitor, url)
-	if err != nil {
-		return
-	}
-
 	return c.createOrUpdate(monitor, url)
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -25,13 +26,14 @@ var (
 )
 
 type monitorResourceModel struct {
-	FriendlyName types.String `tfsdk:"friendly_name"`
-	ID           types.String `tfsdk:"id"`
-	Interval     types.Int64  `tfsdk:"interval"`
-	LastUpdated  types.String `tfsdk:"last_updated"`
-	Timeout      types.Int64  `tfsdk:"timeout"`
-	Type         types.String `tfsdk:"type"`
-	URL          types.String `tfsdk:"url"`
+	FriendlyName  types.String                      `tfsdk:"friendly_name"`
+	ID            types.String                      `tfsdk:"id"`
+	Interval      types.Int64                       `tfsdk:"interval"`
+	LastUpdated   types.String                      `tfsdk:"last_updated"`
+	Timeout       types.Int64                       `tfsdk:"timeout"`
+	Type          types.String                      `tfsdk:"type"`
+	URL           types.String                      `tfsdk:"url"`
+	AlertContacts []uptimerobot.MonitorAlertContact `tfsdk:"alert_contact"`
 }
 
 type monitorResource struct {
@@ -109,6 +111,28 @@ func (r *monitorResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:    true,
 			},
 		},
+		Blocks: map[string]schema.Block{
+			"alert_contact": schema.ListNestedBlock{
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							Description: "Alert contact ID",
+							Required:    true,
+						},
+						"threshold": schema.Int64Attribute{
+							Computed:    true,
+							Description: "Threshold for alerting (minutes)",
+							Default:     int64default.StaticInt64(0),
+						},
+						"recurrence": schema.Int64Attribute{
+							Computed:    true,
+							Description: "Repetition interval for alerts (minutes)",
+							Default:     int64default.StaticInt64(0),
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -119,6 +143,8 @@ func monitorFromPlan(plan monitorResourceModel) (uptimerobot.Monitor, error) {
 		Interval:     plan.Interval.ValueInt64(),
 		Timeout:      plan.Interval.ValueInt64(),
 	}
+	monitor.AlertContacts = uptimerobot.SerializeMonitorAlertContacts(plan.AlertContacts)
+
 	intType, err := uptimerobot.MonitorTypeToInt(plan.Type.ValueString())
 	if err != nil {
 		return monitor, err
