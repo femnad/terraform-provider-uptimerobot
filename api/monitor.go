@@ -25,11 +25,6 @@ type Monitor struct {
 	URL           string `json:"url,omitempty"`
 }
 
-type getMonitorRequest struct {
-	auth
-	Monitor
-}
-
 type deleteMonitorRequest struct {
 	auth
 	ID int64 `json:"id"`
@@ -52,9 +47,11 @@ type createMonitorResponse struct {
 	} `json:"monitor"`
 }
 
-func (c *Client) getMonitorBody(monitor Monitor) (io.Reader, error) {
-	r := getMonitorRequest{Monitor: monitor, auth: auth{ApiKey: c.apiKey}}
-	return bufferBody(r)
+type editMonitorResponse struct {
+	baseResponse
+	Monitor struct {
+		ID int64 `json:"id,omitempty"`
+	} `json:"monitor"`
 }
 
 func (c *Client) getDeleteBody(id int64) (io.Reader, error) {
@@ -101,32 +98,6 @@ func SerializeMonitorAlertContacts(contacts []MonitorAlertContact) string {
 	return strings.Join(alertContacts, "-")
 }
 
-func (c *Client) createOrUpdate(monitor Monitor, url string) (out Monitor, err error) {
-	body, err := c.getMonitorBody(monitor)
-	if err != nil {
-		return
-	}
-
-	var resp createMonitorResponse
-	respBody, err := getRequestResp(url, body)
-	if err != nil {
-		return
-	}
-
-	if resp.Stat != okStatus {
-		return out, fmt.Errorf("unexpected status %s from monitor create request %+v %s", resp.Stat, resp, string(respBody))
-	}
-
-	err = json.Unmarshal(respBody, &resp)
-	if err != nil {
-		return
-	}
-
-	out = monitor
-	out.ID = resp.Monitor.ID
-	return
-}
-
 func (c *Client) newMonitorPayload(monitor Monitor) io.Reader {
 	v := c.baseValues()
 	v.Add("friendly_name", monitor.FriendlyName)
@@ -145,11 +116,12 @@ func (c *Client) newMonitorPayload(monitor Monitor) io.Reader {
 	return strings.NewReader(v.Encode())
 }
 
-func (c *Client) dbgpyl(monitor Monitor) string {
+func (c *Client) editMonitorPayload(monitor Monitor) io.Reader {
 	v := c.baseValues()
+	v.Add("id", strconv.FormatInt(monitor.ID, 10))
 	v.Add("friendly_name", monitor.FriendlyName)
 	v.Add("url", monitor.URL)
-	v.Add("type", strconv.FormatInt(monitor.Type, 10))
+	v.Add("status", strconv.FormatInt(monitor.Status, 10))
 	if monitor.Interval != 0 {
 		v.Add("interval", strconv.FormatInt(monitor.Interval, 10))
 	}
@@ -160,31 +132,7 @@ func (c *Client) dbgpyl(monitor Monitor) string {
 		v.Add("alert_contacts", SerializeMonitorAlertContacts(monitor.AlertContacts))
 	}
 
-	return v.Encode()
-}
-
-func (c *Client) CreateMonitor(monitor Monitor) (out Monitor, err error) {
-	newUrl := fmt.Sprintf("%s/newMonitor", baseURL)
-	payload := c.newMonitorPayload(monitor)
-	respBody, err := postForm(newUrl, payload)
-	if err != nil {
-		return
-	}
-
-	var resp createMonitorResponse
-	err = json.Unmarshal(respBody, &resp)
-	if err != nil {
-		return
-	}
-
-	if resp.Stat != okStatus {
-		return out, fmt.Errorf("unexpected status `%s` when creating monitor, error type: %s, message: %s, %s",
-			resp.Stat, resp.Error.Type, resp.Error.Message, c.dbgpyl(monitor))
-	}
-
-	out.ID = resp.Monitor.ID
-	out.Status = resp.Monitor.Status
-	return
+	return strings.NewReader(v.Encode())
 }
 
 func (c *Client) GetMonitors() (out []Monitor, err error) {
@@ -235,6 +183,30 @@ func (c *Client) GetMonitor(id int64) (out Monitor, err error) {
 	return out, fmt.Errorf("unable to find monitor with id %d", id)
 }
 
+func (c *Client) CreateMonitor(monitor Monitor) (out Monitor, err error) {
+	newUrl := fmt.Sprintf("%s/newMonitor", baseURL)
+	payload := c.newMonitorPayload(monitor)
+	respBody, err := postForm(newUrl, payload)
+	if err != nil {
+		return
+	}
+
+	var resp createMonitorResponse
+	err = json.Unmarshal(respBody, &resp)
+	if err != nil {
+		return
+	}
+
+	if resp.Stat != okStatus {
+		return out, fmt.Errorf("unexpected status `%s` when creating monitor, error type: %s, message: %s",
+			resp.Stat, resp.Error.Type, resp.Error.Message)
+	}
+
+	out.ID = resp.Monitor.ID
+	out.Status = resp.Monitor.Status
+	return
+}
+
 func (c *Client) UpdateMonitor(monitor Monitor) (out Monitor, err error) {
 	existing, err := c.GetMonitor(monitor.ID)
 	if err != nil {
@@ -245,8 +217,26 @@ func (c *Client) UpdateMonitor(monitor Monitor) (out Monitor, err error) {
 		return out, fmt.Errorf("unable to change monitor type via updating")
 	}
 
-	url := fmt.Sprintf("%s/editMonitor", baseURL)
-	return c.createOrUpdate(monitor, url)
+	editURL := fmt.Sprintf("%s/editMonitor", baseURL)
+	payload := c.editMonitorPayload(monitor)
+
+	respBody, err := postForm(editURL, payload)
+	if err != nil {
+		return
+	}
+
+	var resp editMonitorResponse
+	err = json.Unmarshal(respBody, &resp)
+	if err != nil {
+		return
+	}
+
+	if resp.Stat != okStatus {
+		return out, fmt.Errorf("unexpected status `%s` when creating monitor, error type: %s, message: %s",
+			resp.Stat, resp.Error.Type, resp.Error.Message)
+	}
+
+	return c.GetMonitor(monitor.ID)
 }
 
 func (c *Client) DeleteMonitor(id int64) (err error) {
