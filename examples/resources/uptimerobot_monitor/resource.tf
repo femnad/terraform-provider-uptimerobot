@@ -6,6 +6,8 @@ resource "uptimerobot_monitor" "example" {
   interval      = 73
   timeout       = 44
   alert_contact {
-    id = "<alert-contact-id>"
+    id         = "123"
+    threshold  = 0
+    recurrence = 0
   }
 }

@@ -18,10 +18,10 @@ Fetches alert contact for the given friendly name
 ### Optional
 
 - `friendly_name` (String) Friendly name for the alert contact.
+- `type` (String) Type of the alert contact.
+- `value` (String) Value of the alert contact.
 
 ### Read-Only
 
 - `id` (String) Identifier of the alert contact.
 - `status` (String) Status of the alert contact.
-- `type` (String) Type of the alert contact.
-- `value` (String) Value of the alert contact.

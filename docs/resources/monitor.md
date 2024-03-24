@@ -21,7 +21,9 @@ resource "uptimerobot_monitor" "example" {
   interval      = 73
   timeout       = 44
   alert_contact {
-    id = "<alert-contact-id>"
+    id         = "123"
+    threshold  = 0
+    recurrence = 0
   }
 }
 ```
@@ -38,8 +40,8 @@ resource "uptimerobot_monitor" "example" {
 ### Optional
 
 - `alert_contact` (Block List) (see [below for nested schema](#nestedblock--alert_contact))
-- `interval` (Number) Monitor check interval
-- `timeout` (Number) Monitor check timeout
+- `interval` (Number) Monitor check interval (seconds)
+- `timeout` (Number) Monitor check timeout (seconds)
 
 ### Read-Only
 
