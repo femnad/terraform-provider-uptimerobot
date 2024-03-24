@@ -1,6 +1,6 @@
 # terraform-provider-uptimerobot
 
-A quick and dirty provider for interacting with [UptimeRobot](https://uptimerobot.com/) API. It doesn't implement all the features and is not very well tested but documentation is available for implemented resources.
+A quick and dirty provider for interacting with [UptimeRobot](https://uptimerobot.com/) API. It doesn't implement all the features and **it's not well tested** but [documentation](https://registry.terraform.io/providers/femnad/uptimerobot/latest/docs) should be available for implemented resources.
 
 ## Usage
 
