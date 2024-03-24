@@ -15,14 +15,14 @@ type MonitorAlertContact struct {
 }
 
 type Monitor struct {
-	alertContactList []MonitorAlertContact
-	ID               int64  `json:"id,omitempty"`
-	FriendlyName     string `json:"friendly_name,omitempty"`
-	URL              string `json:"url,omitempty"`
-	Type             int64  `json:"type,omitempty"`
-	Interval         int64  `json:"interval,omitempty"`
-	Timeout          int64  `json:"timeout,omitempty"`
-	AlertContacts    string `json:"alertContacts,omitempty"`
+	AlertContacts []MonitorAlertContact
+	FriendlyName  string `json:"friendly_name,omitempty"`
+	ID            int64  `json:"id,omitempty"`
+	Interval      int64  `json:"interval,omitempty"`
+	Status        int64  `json:"status"`
+	Timeout       int64  `json:"timeout,omitempty"`
+	Type          int64  `json:"type,omitempty"`
+	URL           string `json:"url,omitempty"`
 }
 
 type getMonitorRequest struct {
@@ -114,7 +114,7 @@ func (c *Client) createOrUpdate(monitor Monitor, url string) (out Monitor, err e
 	}
 
 	if resp.Stat != okStatus {
-		return out, fmt.Errorf("unexpected status %s from monitor create request", resp.Stat)
+		return out, fmt.Errorf("unexpected status %s from monitor create request %+v %s", resp.Stat, resp, string(respBody))
 	}
 
 	err = json.Unmarshal(respBody, &resp)
@@ -127,9 +127,64 @@ func (c *Client) createOrUpdate(monitor Monitor, url string) (out Monitor, err e
 	return
 }
 
+func (c *Client) newMonitorPayload(monitor Monitor) io.Reader {
+	v := c.baseValues()
+	v.Add("friendly_name", monitor.FriendlyName)
+	v.Add("url", monitor.URL)
+	v.Add("type", strconv.FormatInt(monitor.Type, 10))
+	if monitor.Interval != 0 {
+		v.Add("interval", strconv.FormatInt(monitor.Interval, 10))
+	}
+	if monitor.Timeout != 0 {
+		v.Add("timeout", strconv.FormatInt(monitor.Timeout, 10))
+	}
+	if len(monitor.AlertContacts) > 0 {
+		v.Add("alert_contacts", SerializeMonitorAlertContacts(monitor.AlertContacts))
+	}
+
+	return strings.NewReader(v.Encode())
+}
+
+func (c *Client) dbgpyl(monitor Monitor) string {
+	v := c.baseValues()
+	v.Add("friendly_name", monitor.FriendlyName)
+	v.Add("url", monitor.URL)
+	v.Add("type", strconv.FormatInt(monitor.Type, 10))
+	if monitor.Interval != 0 {
+		v.Add("interval", strconv.FormatInt(monitor.Interval, 10))
+	}
+	if monitor.Timeout != 0 {
+		v.Add("timeout", strconv.FormatInt(monitor.Timeout, 10))
+	}
+	if len(monitor.AlertContacts) > 0 {
+		v.Add("alert_contacts", SerializeMonitorAlertContacts(monitor.AlertContacts))
+	}
+
+	return v.Encode()
+}
+
 func (c *Client) CreateMonitor(monitor Monitor) (out Monitor, err error) {
-	url := fmt.Sprintf("%s/newMonitor", baseURL)
-	return c.createOrUpdate(monitor, url)
+	newUrl := fmt.Sprintf("%s/newMonitor", baseURL)
+	payload := c.newMonitorPayload(monitor)
+	respBody, err := postForm(newUrl, payload)
+	if err != nil {
+		return
+	}
+
+	var resp createMonitorResponse
+	err = json.Unmarshal(respBody, &resp)
+	if err != nil {
+		return
+	}
+
+	if resp.Stat != okStatus {
+		return out, fmt.Errorf("unexpected status `%s` when creating monitor, error type: %s, message: %s, %s",
+			resp.Stat, resp.Error.Type, resp.Error.Message, c.dbgpyl(monitor))
+	}
+
+	out.ID = resp.Monitor.ID
+	out.Status = resp.Monitor.Status
+	return
 }
 
 func (c *Client) GetMonitors() (out []Monitor, err error) {

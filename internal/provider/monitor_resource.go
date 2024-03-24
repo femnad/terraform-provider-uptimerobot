@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -25,15 +26,21 @@ var (
 	_ resource.ResourceWithImportState = &monitorResource{}
 )
 
+type monitorAlertContact struct {
+	ID         types.String `tfsdk:"id"`
+	Threshold  types.Int64  `tfsdk:"threshold"`
+	Recurrence types.Int64  `tfsdk:"recurrence"`
+}
+
 type monitorResourceModel struct {
-	FriendlyName  types.String                      `tfsdk:"friendly_name"`
-	ID            types.String                      `tfsdk:"id"`
-	Interval      types.Int64                       `tfsdk:"interval"`
-	LastUpdated   types.String                      `tfsdk:"last_updated"`
-	Timeout       types.Int64                       `tfsdk:"timeout"`
-	Type          types.String                      `tfsdk:"type"`
-	URL           types.String                      `tfsdk:"url"`
-	AlertContacts []uptimerobot.MonitorAlertContact `tfsdk:"alert_contact"`
+	FriendlyName  types.String          `tfsdk:"friendly_name"`
+	ID            types.String          `tfsdk:"id"`
+	Interval      types.Int64           `tfsdk:"interval"`
+	LastUpdated   types.String          `tfsdk:"last_updated"`
+	Timeout       types.Int64           `tfsdk:"timeout"`
+	Type          types.String          `tfsdk:"type"`
+	URL           types.String          `tfsdk:"url"`
+	AlertContacts []monitorAlertContact `tfsdk:"alert_contact"`
 }
 
 type monitorResource struct {
@@ -103,12 +110,13 @@ func (r *monitorResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Validators:  []validator.String{stringvalidator.OneOf(validMonitorTypes...)},
 			},
 			"interval": schema.Int64Attribute{
-				Description: "Monitor check interval",
+				Description: "Monitor check interval (seconds)",
 				Optional:    true,
 			},
 			"timeout": schema.Int64Attribute{
-				Description: "Monitor check timeout",
+				Description: "Monitor check timeout (seconds)",
 				Optional:    true,
+				Validators:  []validator.Int64{int64validator.AtMost(60)},
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -141,9 +149,19 @@ func monitorFromPlan(plan monitorResourceModel) (uptimerobot.Monitor, error) {
 		FriendlyName: plan.FriendlyName.ValueString(),
 		URL:          plan.URL.ValueString(),
 		Interval:     plan.Interval.ValueInt64(),
-		Timeout:      plan.Interval.ValueInt64(),
+		Timeout:      plan.Timeout.ValueInt64(),
 	}
-	monitor.AlertContacts = uptimerobot.SerializeMonitorAlertContacts(plan.AlertContacts)
+
+	var monitorACs []uptimerobot.MonitorAlertContact
+	for _, contact := range plan.AlertContacts {
+		monitorAC := uptimerobot.MonitorAlertContact{
+			ID:         contact.ID.ValueString(),
+			Threshold:  contact.Threshold.ValueInt64(),
+			Recurrence: contact.Recurrence.ValueInt64(),
+		}
+		monitorACs = append(monitorACs, monitorAC)
+	}
+	monitor.AlertContacts = monitorACs
 
 	intType, err := uptimerobot.MonitorTypeToInt(plan.Type.ValueString())
 	if err != nil {
@@ -181,6 +199,7 @@ func (r *monitorResource) Create(ctx context.Context, req resource.CreateRequest
 
 	planID := strconv.Itoa(int(monitor.ID))
 	plan.ID = types.StringValue(planID)
+	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC3339))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)

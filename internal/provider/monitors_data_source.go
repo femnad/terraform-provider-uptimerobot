@@ -31,7 +31,7 @@ type monitorModel struct {
 	URL          types.String `tfsdk:"url"`
 	Type         types.String `tfsdk:"type"`
 	Interval     types.Int64  `tfsdk:"interval"`
-	Timeout      types.Int64  `tfsdk:"timeouot"`
+	Timeout      types.Int64  `tfsdk:"timeout"`
 }
 
 func (d *monitorsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
