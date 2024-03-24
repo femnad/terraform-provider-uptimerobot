@@ -6,7 +6,7 @@ A quick and dirty provider for interacting with [UptimeRobot](https://uptimerobo
 
 Basic usage example, demonstrating adding an HTTP monitor for `example.com`:
 
-```
+```tf
 terraform {
   required_version = ">= 0.13"
 
