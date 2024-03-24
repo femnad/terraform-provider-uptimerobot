@@ -1,6 +1,6 @@
 # terraform-provider-uptimerobot
 
-A quick and dirty provider for interacting with [UptimeRobot](https://uptimerobot.com/) API. It doesn't implement all the features and **it's not well tested** but [documentation](https://registry.terraform.io/providers/femnad/uptimerobot/latest/docs) should be available for implemented resources.
+A quick and dirty provider for interacting with [UptimeRobot](https://uptimerobot.com/) API. It doesn't implement all the features and **it's not well tested** but [documentation](https://registry.terraform.io/providers/femnad/uptimerobot/latest/docs) should be available for the implemented data sources and resources.
 
 ## Usage
 
@@ -13,7 +13,7 @@ terraform {
   required_providers {
     uptimerobot = {
       source  = "femnad/uptimerobot"
-      version = "0.1.0"
+      version = "0.1.1"
     }
   }
 }
